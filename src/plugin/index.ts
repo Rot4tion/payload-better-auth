@@ -57,8 +57,41 @@ export type BetterAuthPluginAdminOptions = {
      * Default: false (any matching role grants access)
      */
     requireAllRoles?: boolean
-    /** Enable passkey (WebAuthn) sign-in option. Default: false */
-    enablePasskey?: boolean
+    /**
+     * Enable passkey (WebAuthn) sign-in option.
+     * - true: Always show passkey button
+     * - false: Never show passkey button
+     * - 'auto': Auto-detect if passkey plugin is available (default for LoginView)
+     * Default: false (for backwards compatibility)
+     */
+    enablePasskey?: boolean | 'auto'
+    /**
+     * Enable user registration (sign up) option.
+     * - true: Always show "Create account" link
+     * - false: Never show registration option
+     * - 'auto': Auto-detect if sign-up endpoint is available
+     * Default: 'auto' - LoginView automatically detects if Better Auth has signup enabled
+     */
+    enableSignUp?: boolean | 'auto'
+    /**
+     * Default role to assign to new users during registration.
+     * Only used when enableSignUp is enabled.
+     * Default: 'user'
+     */
+    defaultSignUpRole?: string
+    /**
+     * Enable forgot password option.
+     * - true: Always show "Forgot password?" link
+     * - false: Never show forgot password option
+     * - 'auto': Auto-detect if password reset endpoint is available
+     * Default: 'auto' - LoginView automatically detects if Better Auth has password reset enabled
+     */
+    enableForgotPassword?: boolean | 'auto'
+    /**
+     * Custom URL for password reset page. If provided, users will be redirected here
+     * instead of showing the inline password reset form.
+     */
+    resetPasswordUrl?: string
   }
   /** Path to custom logout button component (import map format) */
   logoutButtonComponent?: string

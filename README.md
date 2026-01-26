@@ -209,7 +209,7 @@ export default buildConfig({
 })
 ```
 
-> **⚠️ Important:** Do NOT add a custom `beforeLogin` component to your admin config. The Better Auth plugin automatically injects its own login page, logout button, and redirect handling.
+> **⚠️ Note:** The plugin automatically injects its own login page, logout button, and redirect handling. Don't add a custom `beforeLogin` in Payload's `admin.components` directly - use the plugin's options instead (see [Customization](#customization) for `disableLoginView`, `loginViewComponent`, etc.).
 
 ### Step 4: Client-Side Auth
 
@@ -228,11 +228,28 @@ export const { useSession, signIn, signUp, signOut, twoFactor, passkey } = authC
 
 **Note:** `createPayloadAuthClient()` automatically uses `window.location.origin` as the base URL, so it works seamlessly across local dev, Vercel previews, and production without any configuration.
 
-For full control, you can also use the raw `createAuthClient` from Better Auth:
+**Adding custom plugins (e.g., Stripe):**
+
+For custom plugins with full TypeScript support, use `createAuthClient` with `payloadAuthPlugins`:
 
 ```ts
-import { createAuthClient } from '@delmaredigital/payload-better-auth/client'
+// src/lib/auth/client.ts
+'use client'
+
+import { createAuthClient, payloadAuthPlugins } from '@delmaredigital/payload-better-auth/client'
+import { stripeClient } from '@better-auth/stripe/client'
+
+// Spread payloadAuthPlugins to include defaults (twoFactor, apiKey, passkey)
+// Then add your custom plugins - full type safety!
+export const authClient = createAuthClient({
+  plugins: [...payloadAuthPlugins, stripeClient({ subscription: true })],
+})
+
+// authClient.subscription is fully typed
+export const { useSession, signIn, signUp, signOut, twoFactor, passkey, subscription } = authClient
 ```
+
+This approach uses Better Auth's native `createAuthClient` with our default plugins, giving you full type inference for any custom plugins you add.
 
 ### Step 5: Server-Side Session Access
 
@@ -428,7 +445,7 @@ createBetterAuthPlugin({
 | `admin.login.afterLoginPath` | `string` | `'/admin'` | Redirect path after successful login |
 | `admin.login.requiredRole` | `string \| string[] \| null` | `'admin'` | Required role(s) for admin access. Array = any role matches (unless `requireAllRoles`). Set to `null` to disable. |
 | `admin.login.requireAllRoles` | `boolean` | `false` | When `requiredRole` is an array, require ALL roles (true) or ANY role (false). |
-| `admin.login.enablePasskey` | `boolean` | `false` | Enable passkey (WebAuthn) sign-in option |
+| `admin.login.enablePasskey` | `boolean \| 'auto'` | `false` | Enable passkey (WebAuthn) sign-in option. `'auto'` detects if passkey plugin is available. |
 | `admin.login.enableSignUp` | `boolean \| 'auto'` | `'auto'` | Enable user registration. `'auto'` detects if sign-up endpoint is available. |
 | `admin.login.defaultSignUpRole` | `string` | `'user'` | Default role assigned to new users during registration |
 | `admin.login.enableForgotPassword` | `boolean \| 'auto'` | `'auto'` | Enable forgot password link. `'auto'` detects if endpoint is available. |
@@ -678,6 +695,17 @@ This is useful when you need:
 - Custom 2FA flows different from the built-in inline handling
 - Integration with external identity providers
 - Custom branding or UI requirements
+
+**Frontend Login (outside admin panel):**
+
+For user-facing login pages (not the Payload admin), you don't need to configure anything in the plugin. Just use the auth client directly in your own React components:
+
+```tsx
+import { authClient } from '@/lib/auth/client'
+
+// Use authClient.signIn.email(), authClient.signUp.email(), etc.
+// See "Handling 2FA in Custom Login Forms" section below for a complete example
+```
 
 ### Custom Admin Components
 
@@ -1152,15 +1180,18 @@ export const auth = betterAuth({
 
 ### User Registration
 
-The `LoginView` includes an optional "Create account" link that automatically detects if user registration is available. When enabled, users can register directly from the login page.
+The `LoginView` **automatically detects** if user registration is available by checking Better Auth's sign-up endpoint. If your Better Auth config has `emailAndPassword.enabled: true` (and not `disableSignUp: true`), the "Create account" link appears automatically.
 
-**Configuration:**
+**No configuration needed** for most cases - it just works based on your Better Auth settings.
+
+**Optional overrides** (only if you need to force show/hide):
 ```typescript
 createBetterAuthPlugin({
   createAuth,
   admin: {
     login: {
-      enableSignUp: true,       // or 'auto' (default) to detect availability
+      // These options override auto-detection (usually not needed)
+      enableSignUp: 'auto',      // 'auto' (default) | true | false
       defaultSignUpRole: 'user', // Role assigned to new users (default: 'user')
     },
   },
@@ -1168,22 +1199,28 @@ createBetterAuthPlugin({
 ```
 
 **Notes:**
+- `'auto'` (default): Detects availability from Better Auth's sign-up endpoint
+- `true`: Always show registration (even if Better Auth returns 404)
+- `false`: Never show registration
 - New users are assigned `defaultSignUpRole` (default: `'user'`)
 - If email verification is required, users see a success message to check their email
 - Role-based access control still applies - users without `requiredRole` see "Access Denied"
 
 ### Password Reset Flow
 
-The `LoginView` includes an inline "Forgot password?" link that automatically detects if password reset is available. When clicked, users can request a reset link without leaving the login page.
+The `LoginView` **automatically detects** if password reset is available by checking Better Auth's reset endpoint. The "Forgot password?" link appears automatically when available.
 
-**Configuration:**
+**No configuration needed** for most cases - it just works based on your Better Auth settings.
+
+**Optional overrides** (only if you need to force show/hide or use a custom URL):
 ```typescript
 createBetterAuthPlugin({
   createAuth,
   admin: {
     login: {
-      enableForgotPassword: true,  // or 'auto' (default) to detect availability
-      resetPasswordUrl: '/custom-reset',  // Optional: redirect to custom page instead
+      // These options override auto-detection (usually not needed)
+      enableForgotPassword: 'auto',       // 'auto' (default) | true | false
+      resetPasswordUrl: '/custom-reset',  // Optional: redirect to custom page instead of inline form
     },
   },
 })

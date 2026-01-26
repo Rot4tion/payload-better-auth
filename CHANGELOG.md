@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-01-26
+
+### Fixed
+
+#### LoginView Plugin Options Now Typed Correctly (#5)
+
+The following options were documented in the README and working in `LoginView`, but the TypeScript types in `BetterAuthPluginAdminOptions.login` were missing them:
+
+- `enableSignUp?: boolean | 'auto'` - Enable user registration (auto-detects by default)
+- `defaultSignUpRole?: string` - Default role for new users (default: `'user'`)
+- `enableForgotPassword?: boolean | 'auto'` - Enable password reset (auto-detects by default)
+- `resetPasswordUrl?: string` - Custom URL for password reset page
+- `enablePasskey` now also supports `'auto'` for auto-detection
+
+These options were already wired through to `LoginView` but TypeScript would error when trying to use them.
+
+### Added
+
+#### `payloadAuthPlugins` Export for Custom Plugin Support (#4)
+
+New `payloadAuthPlugins` export enables adding custom plugins (like Stripe) with full TypeScript type safety:
+
+```typescript
+import { createAuthClient, payloadAuthPlugins } from '@delmaredigital/payload-better-auth/client'
+import { stripeClient } from '@better-auth/stripe/client'
+
+export const authClient = createAuthClient({
+  plugins: [...payloadAuthPlugins, stripeClient({ subscription: true })],
+})
+
+// authClient.subscription is fully typed!
+```
+
+This approach uses Better Auth's native `createAuthClient` (which we re-export) combined with our default plugins tuple. This gives you full type inference for any custom plugins you add, unlike wrapper functions that lose type information.
+
+**For simple setups without custom plugins**, `createPayloadAuthClient()` still works and is the easiest option:
+
+```typescript
+import { createPayloadAuthClient } from '@delmaredigital/payload-better-auth/client'
+
+export const authClient = createPayloadAuthClient()
+```
+
+### Changed
+
+#### Documentation Clarifications
+
+- **Auto-detection is the default**: Clarified that `enableSignUp`, `enableForgotPassword`, and `enablePasskey` all support `'auto'` (the default), which automatically detects availability from Better Auth's endpoints. No configuration needed for most cases.
+- **Customization paths**: Added clearer documentation for overriding/disabling the `LoginView` and using custom admin or frontend login components.
+- **Custom plugins**: Updated client documentation to show `payloadAuthPlugins` pattern for Stripe and other custom plugins with full type safety.
+
 ## [0.3.6] - 2026-01-26
 
 ### Added
