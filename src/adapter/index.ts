@@ -383,16 +383,19 @@ export function payloadAdapter({
                 // Keep both for compatibility - Better Auth expects userId
               }
             }
-            // Convert date strings to Date objects based on schema type
-            // Better Auth expects Date objects for expiresAt comparisons
-            if (
-              fieldDef.type === 'date' &&
-              fieldKey in transformed &&
-              typeof transformed[fieldKey] === 'string'
-            ) {
-              const dateValue = new Date(transformed[fieldKey] as string)
+          }
+
+          // Convert date strings to Date objects
+          // Better Auth expects Date objects for date field comparisons
+          for (const [key, value] of Object.entries(transformed)) {
+            if (typeof value !== 'string') continue
+
+            // Check if schema defines this field as a date type
+            const fieldDef = modelSchema.fields[key]
+            if (fieldDef?.type === 'date') {
+              const dateValue = new Date(value)
               if (!isNaN(dateValue.getTime())) {
-                transformed[fieldKey] = dateValue
+                transformed[key] = dateValue
               }
             }
           }
